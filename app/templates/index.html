@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Atlas Audio · Lector de estudio</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,900&family=Spline+Sans+Mono:wght@400;500&family=Newsreader:opsz,wght@6..72,400;6..72,500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+  <div class="grain"></div>
+
+  <header class="masthead">
+    <div class="masthead-inner">
+      <div class="brand">
+        <span class="brand-mark">◎</span>
+        <div>
+          <h1>Atlas <em>Audio</em></h1>
+          <p class="tagline">Lector de estudio · microbiolog-ia.com</p>
+        </div>
+      </div>
+      <nav class="tabs">
+        <button class="tab is-active" data-tab="read">Leer texto</button>
+        <button class="tab" data-tab="listen">Escuchar</button>
+        <button class="tab" data-tab="transcribe">Transcribir</button>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <!-- ============ PANEL: LEER / GENERAR ============ -->
+    <section class="panel is-active" id="panel-read">
+      <div class="panel-head">
+        <h2>Convertir a audio</h2>
+        <p>Pega un texto, o sube un PDF, EPUB o TXT. Se prepara y se lee con voz natural.</p>
+      </div>
+
+      <div class="dropzone" id="dropzone">
+        <input type="file" id="file-input" accept=".pdf,.epub,.txt,.md" hidden />
+        <span class="dz-icon">⬆</span>
+        <p><strong>Arrastra un documento</strong> o <button class="link" id="browse-btn">selecciónalo</button></p>
+        <small>PDF · EPUB · TXT · MD</small>
+      </div>
+
+      <textarea id="text-input" placeholder="…o pega aquí el texto del libro, artículo o capítulo que quieres escuchar."></textarea>
+
+      <div class="controls-row">
+        <label class="field">
+          <span>Voz</span>
+          <select id="voice-select">
+            {% for id, label in voices.items() %}
+            <option value="{{ id }}" {% if id == default_voice %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <div class="estimate" id="estimate">— caracteres · — fragmentos</div>
+        <button class="primary" id="generate-btn">Generar audio</button>
+      </div>
+
+      <div class="progress" id="progress" hidden>
+        <div class="progress-bar"><span></span></div>
+        <p id="progress-text">Sintetizando…</p>
+      </div>
+    </section>
+
+    <!-- ============ PANEL: REPRODUCTOR ============ -->
+    <section class="panel" id="panel-listen">
+      <div class="panel-head">
+        <h2>Reproductor</h2>
+        <p>Ajusta la velocidad de <strong>0.5x a 3x</strong> sin alterar el tono de la voz.</p>
+      </div>
+
+      <div class="player" id="player">
+        <div class="player-empty" id="player-empty">
+          Aún no hay audio. Genera uno en la pestaña <strong>Leer texto</strong>.
+        </div>
+
+        <div class="player-body" id="player-body" hidden>
+          <audio id="audio" preload="auto"></audio>
+
+          <div class="now-playing">
+            <div class="np-disc" id="np-disc">◎</div>
+            <div>
+              <div class="np-title" id="np-title">Lectura generada</div>
+              <div class="np-sub" id="np-sub">Voz natural · español</div>
+            </div>
+          </div>
+
+          <div class="timeline">
+            <span class="t-cur" id="t-cur">0:00</span>
+            <input type="range" id="seek" min="0" max="1000" value="0" />
+            <span class="t-dur" id="t-dur">0:00</span>
+          </div>
+
+          <div class="transport">
+            <button class="t-btn" id="back-btn" title="Retroceder 15s">⟲ 15</button>
+            <button class="t-btn play" id="play-btn" title="Reproducir/Pausar">▶</button>
+            <button class="t-btn" id="fwd-btn" title="Avanzar 15s">15 ⟳</button>
+          </div>
+
+          <div class="speed">
+            <div class="speed-head">
+              <span>Velocidad</span>
+              <span class="speed-value" id="speed-value">1.0x</span>
+            </div>
+            <input type="range" id="speed-slider" min="0.5" max="3" step="0.1" value="1" />
+            <div class="speed-presets">
+              <button data-speed="1">1x</button>
+              <button data-speed="1.5">1.5x</button>
+              <button data-speed="2">2x</button>
+              <button data-speed="2.5">2.5x</button>
+              <button data-speed="3">3x</button>
+            </div>
+          </div>
+
+          <a class="download" id="download-btn" download="atlas-audio.wav">↓ Descargar WAV</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ PANEL: TRANSCRIBIR ============ -->
+    <section class="panel" id="panel-transcribe">
+      <div class="panel-head">
+        <h2>Transcribir audio</h2>
+        <p>Sube una grabación (clase, conferencia, nota de voz) y obtén el texto.</p>
+      </div>
+
+      <div class="dropzone" id="dropzone-audio">
+        <input type="file" id="audio-input" accept="audio/*,video/*" hidden />
+        <span class="dz-icon">🎙</span>
+        <p><strong>Arrastra un audio</strong> o <button class="link" id="browse-audio-btn">selecciónalo</button></p>
+        <small>MP3 · WAV · M4A · MP4 …</small>
+      </div>
+
+      <button class="primary" id="transcribe-btn" disabled>Transcribir</button>
+
+      <div class="progress" id="stt-progress" hidden>
+        <div class="progress-bar indeterminate"><span></span></div>
+        <p>Transcribiendo con Whisper large-v3…</p>
+      </div>
+
+      <div class="transcript" id="transcript" hidden></div>
+    </section>
+  </main>
+
+  <footer>
+    <span>desktop-denis · RTX 5070 Ti</span>
+    <span>Kokoro-82M + faster-whisper</span>
+  </footer>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,26 @@
+# Caddyfile.example — reverse proxy en nas-rm para exponer Atlas Audio bajo el dominio.
+#
+# La inferencia vive en desktop-denis (la GPU). El NAS solo proxea a través de
+# la red Tailscale. Caddy gestiona HTTPS automáticamente.
+#
+# Coloca esto en /etc/caddy/Caddyfile (o inclúyelo) en nas-rm y recarga Caddy.
+#
+# Patrón hermano de tu atlas.microbiolog-ia.com (Qwen). Aquí: audio.microbiolog-ia.com
+
+audio.microbiolog-ia.com {
+    # 100.87.126.36 = IP Tailscale de desktop-denis (donde corre el servicio:8080)
+    reverse_proxy desktop-denis:8080 {
+        # Subidas grandes (PDFs, audios largos) y respuestas TTS largas
+        flush_interval -1
+    }
+
+    # Límite de tamaño de subida (ajusta según tus libros/audios)
+    request_body {
+        max_size 200MB
+    }
+
+    encode gzip
+    log {
+        output file /var/log/caddy/audio.microbiolog-ia.log
+    }
+}

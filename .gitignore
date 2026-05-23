@@ -1,0 +1,21 @@
+# Entorno
+.venv/
+venv/
+__pycache__/
+*.pyc
+
+# Datos y salidas (no versionar audios/documentos)
+data/uploads/*
+data/output/*
+!data/uploads/.gitkeep
+!data/output/.gitkeep
+
+# Modelos descargados (Kokoro/Whisper se bajan en runtime)
+*.onnx
+*.bin
+*.pt
+
+# Sistema
+.DS_Store
+Thumbs.db
+*.log
