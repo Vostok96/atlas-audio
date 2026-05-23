@@ -18,8 +18,8 @@ from __future__ import annotations
 
 import io
 import logging
-import wave
 
+import lameenc
 import numpy as np
 
 from .textprep import prepare
@@ -93,31 +93,32 @@ class TTSEngine:
             return np.zeros(0, dtype=np.float32)
         return np.concatenate(pieces)
 
-    def synthesize_to_wav_bytes(
+    def synthesize_to_mp3_bytes(
         self, text: str, voice: str = DEFAULT_VOICE, speed: float = 1.0
     ) -> bytes:
-        """Igual que synthesize() pero devuelve bytes WAV listos para HTTP."""
+        """Igual que synthesize() pero devuelve bytes MP3 listos para HTTP."""
         audio = self.synthesize(text, voice=voice, speed=speed)
-        return _to_wav_bytes(audio, SAMPLE_RATE)
+        return _to_mp3_bytes(audio, SAMPLE_RATE)
 
     def count_fragments(self, text: str) -> int:
         """Cuántos fragmentos generará un texto (para estimaciones en la UI)."""
         return len(prepare(text))
 
 
-def _to_wav_bytes(audio: np.ndarray, sample_rate: int) -> bytes:
-    """Convierte float32 [-1,1] a WAV PCM16 en memoria."""
+def _to_mp3_bytes(audio: np.ndarray, sample_rate: int, bitrate: int = 128) -> bytes:
+    """Convierte float32 [-1,1] a MP3 en memoria usando lameenc (sin dependencias de sistema)."""
     if audio.size == 0:
         audio = np.zeros(1, dtype=np.float32)
     clipped = np.clip(audio, -1.0, 1.0)
     pcm16 = (clipped * 32767.0).astype(np.int16)
-    buf = io.BytesIO()
-    with wave.open(buf, "wb") as wf:
-        wf.setnchannels(1)
-        wf.setsampwidth(2)
-        wf.setframerate(sample_rate)
-        wf.writeframes(pcm16.tobytes())
-    return buf.getvalue()
+    encoder = lameenc.Encoder()
+    encoder.set_bit_rate(bitrate)
+    encoder.set_in_sample_rate(sample_rate)
+    encoder.set_channels(1)
+    encoder.set_quality(2)  # 2 = alta calidad
+    mp3_data = encoder.encode(pcm16.tobytes())
+    mp3_data += encoder.flush()
+    return mp3_data
 
 
 # Instancia global perezosa (se importa desde server.py).

@@ -85,11 +85,11 @@ async def synthesize(payload: dict):
         )
     logger.info("TTS: %d chars, voz=%s", len(text), voice)
     try:
-        wav = tts.engine.synthesize_to_wav_bytes(text, voice=voice, speed=speed)
+        mp3 = tts.engine.synthesize_to_mp3_bytes(text, voice=voice, speed=speed)
     except Exception as e:  # noqa: BLE001
         logger.exception("Fallo en TTS")
         raise HTTPException(status_code=500, detail=f"Error en síntesis: {e}") from e
-    return Response(content=wav, media_type="audio/wav")
+    return Response(content=mp3, media_type="audio/mpeg")
 
 
 @app.post("/api/document")
