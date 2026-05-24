@@ -6,8 +6,8 @@
   <title>Atlas Audio · Lector de estudio</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,900&family=Spline+Sans+Mono:wght@400;500&family=Newsreader:opsz,wght@6..72,400;6..72,500&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/static/styles.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,800&family=Spline+Sans+Mono:wght@400;500&family=Newsreader:opsz,wght@6..72,400;6..72,500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/styles.css?v=1.2.0" />
 </head>
 <body>
   <div class="grain"></div>
@@ -18,23 +18,31 @@
         <span class="brand-mark">◎</span>
         <div>
           <h1>Atlas <em>Audio</em></h1>
-          <p class="tagline">Lector de estudio · microbiolog-ia.com</p>
+          <p class="tagline">desktop-denis · RTX 5070 Ti</p>
         </div>
       </div>
-      <nav class="tabs">
-        <button class="tab is-active" data-tab="read">Leer texto</button>
-        <button class="tab" data-tab="listen">Escuchar</button>
+      <nav class="tabs" aria-label="Secciones">
+        <button class="tab is-active" data-tab="read">Leer</button>
+        <button class="tab" data-tab="listen">Biblioteca</button>
+        <button class="tab" data-tab="translate">Traducir</button>
         <button class="tab" data-tab="transcribe">Transcribir</button>
       </nav>
+      <a class="logout" href="/logout" title="Cerrar sesión">Salir</a>
     </div>
   </header>
 
   <main>
-    <!-- ============ PANEL: LEER / GENERAR ============ -->
+    <section class="system-strip" aria-label="Límites activos">
+      <span>GPU: 1 tarea</span>
+      <span>Texto: {{ "{:,}".format(max_tts_chars).replace(",", ".") }} caracteres</span>
+      <span>Docs: {{ max_document_mb }} MB</span>
+      <span>Audio: {{ max_audio_mb }} MB</span>
+      <span>Traductor: {{ translation_model }}</span>
+    </section>
+
     <section class="panel is-active" id="panel-read">
-      <div class="panel-head">
-        <h2>Convertir a audio</h2>
-        <p>Pega un texto, o sube un PDF, EPUB o TXT. Se prepara y se lee con voz natural.</p>
+      <div class="panel-head compact">
+        <h2>Crear audio</h2>
       </div>
 
       <div class="dropzone" id="dropzone">
@@ -44,7 +52,12 @@
         <small>PDF · EPUB · TXT · MD</small>
       </div>
 
-      <textarea id="text-input" placeholder="…o pega aquí el texto del libro, artículo o capítulo que quieres escuchar."></textarea>
+      <label class="field full">
+        <span>Título</span>
+        <input id="title-input" type="text" placeholder="Capítulo, libro o tema" maxlength="90" />
+      </label>
+
+      <textarea id="text-input" placeholder="Pega aquí el capítulo o fragmento que quieres escuchar."></textarea>
 
       <div class="controls-row">
         <label class="field">
@@ -56,25 +69,30 @@
           </select>
         </label>
         <div class="estimate" id="estimate">— caracteres · — fragmentos</div>
-        <button class="primary" id="generate-btn">Generar audio</button>
+        <button class="primary" id="generate-btn">Generar</button>
       </div>
 
-      <div class="progress" id="progress" hidden>
-        <div class="progress-bar"><span></span></div>
-        <p id="progress-text">Sintetizando…</p>
+      <div class="job-progress" id="active-tts-job" hidden>
+        <div>
+          <strong id="active-tts-title">Trabajo TTS</strong>
+          <p id="progress-text">En cola…</p>
+        </div>
+        <div class="progress">
+          <div class="progress-bar"><span id="tts-progress-bar"></span></div>
+        </div>
+        <button class="t-btn danger" id="cancel-tts-btn">Cancelar</button>
       </div>
     </section>
 
-    <!-- ============ PANEL: REPRODUCTOR ============ -->
     <section class="panel" id="panel-listen">
-      <div class="panel-head">
-        <h2>Reproductor</h2>
-        <p>Ajusta la velocidad de <strong>0.5x a 3x</strong> sin alterar el tono de la voz.</p>
+      <div class="panel-head compact split">
+        <h2>Biblioteca</h2>
+        <button class="t-btn" id="refresh-jobs">Actualizar</button>
       </div>
 
       <div class="player" id="player">
         <div class="player-empty" id="player-empty">
-          Aún no hay audio. Genera uno en la pestaña <strong>Leer texto</strong>.
+          No hay audio cargado.
         </div>
 
         <div class="player-body" id="player-body" hidden>
@@ -95,9 +113,9 @@
           </div>
 
           <div class="transport">
-            <button class="t-btn" id="back-btn" title="Retroceder 15s">⟲ 15</button>
+            <button class="t-btn icon" id="back-btn" title="Retroceder 15s">⟲ 15</button>
             <button class="t-btn play" id="play-btn" title="Reproducir/Pausar">▶</button>
-            <button class="t-btn" id="fwd-btn" title="Avanzar 15s">15 ⟳</button>
+            <button class="t-btn icon" id="fwd-btn" title="Avanzar 15s">15 ⟳</button>
           </div>
 
           <div class="speed">
@@ -115,41 +133,101 @@
             </div>
           </div>
 
-          <a class="download" id="download-btn" download="atlas-audio.mp3">↓ Descargar MP3</a>
+          <a class="download" id="download-btn" download="atlas-audio.mp3">Descargar MP3</a>
         </div>
       </div>
+
+      <div class="jobs-list" id="jobs-list"></div>
     </section>
 
-    <!-- ============ PANEL: TRANSCRIBIR ============ -->
+    <section class="panel" id="panel-translate">
+      <div class="panel-head compact">
+        <h2>Traducir audio</h2>
+      </div>
+
+      <div class="dropzone" id="dropzone-translate">
+        <input type="file" id="translate-input" accept="audio/*,video/*" hidden />
+        <span class="dz-icon">EN/ES</span>
+        <p><strong>Arrastra un audio en ingles</strong> o <button class="link" id="browse-translate-btn">seleccionalo</button></p>
+        <small id="selected-translate-name">MP3 · WAV · M4A · MP4</small>
+      </div>
+
+      <div class="controls-row">
+        <label class="field">
+          <span>Voz</span>
+          <select id="voice-select-translate">
+            {% for id, label in voices.items() %}
+            <option value="{{ id }}" {% if id == default_voice %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <div class="estimate" id="translate-estimate">
+          Ingles a espanol · max. {{ "{:,}".format(max_translation_chars).replace(",", ".") }} caracteres transcritos
+        </div>
+        <button class="primary" id="translate-btn" disabled>Traducir a MP3</button>
+      </div>
+
+      <div class="job-progress" id="active-translate-job" hidden>
+        <div>
+          <strong id="active-translate-title">Traduccion</strong>
+          <p id="translate-progress-text">En cola...</p>
+        </div>
+        <div class="progress">
+          <div class="progress-bar"><span id="translate-progress-bar"></span></div>
+        </div>
+        <button class="t-btn danger" id="cancel-translate-btn">Cancelar</button>
+      </div>
+
+      <div class="transcript" id="translation-transcript" hidden></div>
+    </section>
+
     <section class="panel" id="panel-transcribe">
-      <div class="panel-head">
-        <h2>Transcribir audio</h2>
-        <p>Sube una grabación (clase, conferencia, nota de voz) y obtén el texto.</p>
+      <div class="panel-head compact">
+        <h2>Transcribir</h2>
       </div>
 
       <div class="dropzone" id="dropzone-audio">
         <input type="file" id="audio-input" accept="audio/*,video/*" hidden />
         <span class="dz-icon">🎙</span>
         <p><strong>Arrastra un audio</strong> o <button class="link" id="browse-audio-btn">selecciónalo</button></p>
-        <small>MP3 · WAV · M4A · MP4 …</small>
+        <small id="selected-audio-name">MP3 · WAV · M4A · MP4</small>
       </div>
 
       <button class="primary" id="transcribe-btn" disabled>Transcribir</button>
 
-      <div class="progress" id="stt-progress" hidden>
-        <div class="progress-bar indeterminate"><span></span></div>
-        <p>Transcribiendo con Whisper large-v3…</p>
+      <div class="job-progress" id="active-stt-job" hidden>
+        <div>
+          <strong id="active-stt-title">Transcripción</strong>
+          <p id="stt-progress-text">En cola…</p>
+        </div>
+        <div class="progress">
+          <div class="progress-bar indeterminate"><span></span></div>
+        </div>
+        <button class="t-btn danger" id="cancel-stt-btn">Cancelar</button>
       </div>
 
       <div class="transcript" id="transcript" hidden></div>
     </section>
   </main>
 
-  <footer>
-    <span>desktop-denis · RTX 5070 Ti</span>
-    <span>Kokoro-82M + faster-whisper</span>
-  </footer>
+  <div class="mini-player" id="mini-player" hidden>
+    <button class="mini-play" id="mini-play">▶</button>
+    <div class="mini-copy">
+      <strong id="mini-title">Atlas Audio</strong>
+      <span id="mini-status">Listo</span>
+    </div>
+    <input type="range" id="mini-seek" min="0" max="1000" value="0" />
+    <span id="mini-time">0:00</span>
+  </div>
 
-  <script src="/static/app.js"></script>
+  <script>
+    window.ATLAS_LIMITS = {
+      maxTtsChars: {{ max_tts_chars }},
+      maxDocumentMb: {{ max_document_mb }},
+      maxAudioMb: {{ max_audio_mb }},
+      maxTranslationChars: {{ max_translation_chars }}
+    };
+  </script>
+  <script src="/static/app.js?v=1.2.0"></script>
 </body>
 </html>

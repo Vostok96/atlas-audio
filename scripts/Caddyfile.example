@@ -8,13 +8,19 @@
 # Patrón hermano de tu atlas.microbiolog-ia.com (Qwen). Aquí: audio.microbiolog-ia.com
 
 audio.microbiolog-ia.com {
+    header {
+        X-Content-Type-Options nosniff
+        Referrer-Policy no-referrer
+        Permissions-Policy "microphone=(), camera=(), geolocation=()"
+    }
+
     # 100.87.126.36 = IP Tailscale de desktop-denis (donde corre el servicio:8080)
     reverse_proxy desktop-denis:8080 {
-        # Subidas grandes (PDFs, audios largos) y respuestas TTS largas
+        # Subidas grandes; TTS/STT se manejan como trabajos cortos de API.
         flush_interval -1
     }
 
-    # Límite de tamaño de subida (ajusta según tus libros/audios)
+    # Debe ser >= ATLAS_MAX_AUDIO_MB. El backend también aplica sus propios límites.
     request_body {
         max_size 200MB
     }

@@ -11,10 +11,13 @@ VRAM aproximada de large-v3 en float16: ~4-5 GB.
 from __future__ import annotations
 
 import logging
+from typing import Callable
 
 logger = logging.getLogger("atlas.stt")
 
 DEFAULT_MODEL = "large-v3"
+ProgressCallback = Callable[[int, str], None]
+CancelCallback = Callable[[], bool]
 
 
 class STTEngine:
@@ -48,7 +51,12 @@ class STTEngine:
         logger.info("faster-whisper cargado.")
 
     def transcribe(
-        self, audio_path: str, language: str | None = "es", vad_filter: bool = True
+        self,
+        audio_path: str,
+        language: str | None = "es",
+        vad_filter: bool = True,
+        progress_callback: ProgressCallback | None = None,
+        cancel_callback: CancelCallback | None = None,
     ) -> dict:
         """
         Transcribe un archivo de audio. Devuelve:
@@ -66,11 +74,15 @@ class STTEngine:
         segments = []
         full_text_parts = []
         for seg in segments_gen:
+            if cancel_callback and cancel_callback():
+                break
             segments.append(
                 {"start": round(seg.start, 2), "end": round(seg.end, 2),
                  "text": seg.text.strip()}
             )
             full_text_parts.append(seg.text.strip())
+            if progress_callback:
+                progress_callback(len(segments), seg.text.strip())
 
         return {
             "language": info.language,

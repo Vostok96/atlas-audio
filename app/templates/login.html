@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Atlas Audio · Login</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,800&family=Spline+Sans+Mono:wght@400;500&family=Newsreader:opsz,wght@6..72,400;6..72,500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/styles.css?v=1.2.0" />
+</head>
+<body class="login-page">
+  <main class="login-shell">
+    <section class="login-panel">
+      <div class="brand login-brand">
+        <span class="brand-mark">◎</span>
+        <div>
+          <h1>Atlas <em>Audio</em></h1>
+          <p class="tagline">Acceso personal · microbiolog-ia.com</p>
+        </div>
+      </div>
+
+      <form method="post" action="/login" class="login-form">
+        <input type="hidden" name="next" value="{{ next }}" />
+        <label class="field">
+          <span>Usuario</span>
+          <input
+            type="text"
+            name="username"
+            autocomplete="username"
+            value="{{ username }}"
+            autofocus
+            {% if not password_configured %}disabled{% endif %}
+          />
+        </label>
+        <label class="field">
+          <span>Contraseña</span>
+          <input
+            type="password"
+            name="password"
+            autocomplete="current-password"
+            {% if not password_configured %}disabled{% endif %}
+          />
+        </label>
+        <button class="primary" type="submit" {% if not password_configured %}disabled{% endif %}>
+          Entrar
+        </button>
+      </form>
+
+      {% if error %}
+      <p class="login-error">{{ error }}</p>
+      {% endif %}
+
+      {% if not password_configured %}
+      <p class="login-note">
+        En la desktop define <code>ATLAS_AUDIO_PASSWORD</code> y reinicia el servidor.
+        Para producción añade también <code>ATLAS_AUDIO_SECRET</code> y
+        <code>ATLAS_AUDIO_COOKIE_SECURE=1</code>.
+      </p>
+      {% else %}
+      <p class="login-note">
+        Sesión privada para {{ username }}. La inferencia queda limitada a una tarea GPU a la vez.
+      </p>
+      {% endif %}
+    </section>
+  </main>
+</body>
+</html>
