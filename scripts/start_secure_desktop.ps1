@@ -18,7 +18,7 @@ Set-Location $root
 # Actualizar código desde GitHub (se puede saltar con -SkipUpdate)
 if (-not $SkipUpdate) {
     Write-Host "[Atlas Audio] Actualizando codigo desde GitHub..."
-    & git pull
+    & git pull origin master
     if ($LASTEXITCODE -ne 0) {
         Write-Warning "git pull fallo. Continuando con el codigo local."
     }
