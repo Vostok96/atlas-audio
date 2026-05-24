@@ -161,14 +161,14 @@ textInput.addEventListener("input", () => {
 
 async function updateEstimate() {
   const text = textInput.value.trim();
-  const maxChars = window.ATLAS_LIMITS?.maxTtsChars || 60000;
+  const maxBook = window.ATLAS_LIMITS?.maxDocumentTextChars || 240000;
   if (!text) {
-    estimate.textContent = "- caracteres · - fragmentos";
+    estimate.textContent = "— caracteres · — fragmentos";
     generateBtn.disabled = false;
     return;
   }
-  if (text.length > maxChars) {
-    estimate.textContent = `${text.length.toLocaleString()} caracteres · supera el limite seguro (${maxChars.toLocaleString()})`;
+  if (text.length > maxBook) {
+    estimate.textContent = `${text.length.toLocaleString()} caracteres · supera el máximo del libro (${maxBook.toLocaleString()})`;
     generateBtn.disabled = true;
     return;
   }
@@ -180,7 +180,10 @@ async function updateEstimate() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ text }),
     });
-    estimate.textContent = `${data.chars.toLocaleString()} caracteres · ${data.fragments} fragmentos`;
+    const splitInfo = data.split_parts > 1
+      ? ` · se dividirá en ${data.split_parts} partes`
+      : "";
+    estimate.textContent = `${data.chars.toLocaleString()} caracteres · ${data.fragments} fragmentos${splitInfo}`;
   } catch {
     estimate.textContent = `${text.length.toLocaleString()} caracteres`;
   }
@@ -201,7 +204,7 @@ generateBtn.addEventListener("click", async () => {
 
   generateBtn.disabled = true;
   try {
-    const job = await fetchJson("/api/tts/jobs", {
+    const data = await fetchJson("/api/tts/jobs", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -210,7 +213,11 @@ generateBtn.addEventListener("click", async () => {
         voice: $("#voice-select").value,
       }),
     });
-    state.activeTtsJobId = job.id;
+    const jobs = data.jobs || [];
+    if (jobs.length > 0) state.activeTtsJobId = jobs[0].id;
+    if (data.split_count > 1) {
+      estimate.textContent = `Libro dividido en ${data.split_count} partes. Procesando en cola…`;
+    }
     renderActiveJobs();
     showTab("listen");
     await refreshJobs();

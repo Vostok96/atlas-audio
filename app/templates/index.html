@@ -34,7 +34,8 @@
   <main>
     <section class="system-strip" aria-label="Límites activos">
       <span>GPU: 1 tarea</span>
-      <span>Texto: {{ "{:,}".format(max_tts_chars).replace(",", ".") }} caracteres</span>
+      <span>Por parte: {{ "{:,}".format(max_tts_chars).replace(",", ".") }} caracteres</span>
+      <span>Libro max: {{ "{:,}".format(max_document_text_chars).replace(",", ".") }} caracteres</span>
       <span>Docs: {{ max_document_mb }} MB</span>
       <span>Audio: {{ max_audio_mb }} MB</span>
       <span>Traductor: {{ translation_model }}</span>
@@ -223,6 +224,7 @@
   <script>
     window.ATLAS_LIMITS = {
       maxTtsChars: {{ max_tts_chars }},
+      maxDocumentTextChars: {{ max_document_text_chars }},
       maxDocumentMb: {{ max_document_mb }},
       maxAudioMb: {{ max_audio_mb }},
       maxTranslationChars: {{ max_translation_chars }}

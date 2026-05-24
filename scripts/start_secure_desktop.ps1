@@ -54,12 +54,12 @@ $env:ATLAS_AUDIO_SECRET          = $Secret
 $env:ATLAS_AUDIO_COOKIE_SECURE   = "1"
 
 # Limites conservadores para uso personal remoto.
-$env:ATLAS_MAX_TTS_CHARS             = "60000"
+$env:ATLAS_MAX_TTS_CHARS             = "150000"
 $env:ATLAS_MAX_DOCUMENT_MB           = "50"
 $env:ATLAS_MAX_DOCUMENT_TEXT_CHARS   = "240000"
 $env:ATLAS_MAX_AUDIO_MB              = "200"
 $env:ATLAS_MAX_TRANSLATION_CHARS     = "60000"
-$env:ATLAS_MAX_ACTIVE_JOBS           = "3"
+$env:ATLAS_MAX_ACTIVE_JOBS           = "6"
 $env:ATLAS_SESSION_DAYS              = "30"
 $env:ATLAS_OLLAMA_BASE_URL           = "http://127.0.0.1:11434"
 $env:ATLAS_TRANSLATION_MODEL         = $TranslationModel

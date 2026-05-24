@@ -72,12 +72,12 @@ def _env_bool(name: str, default: bool = False) -> bool:
 
 
 # Límites conservadores para uso personal remoto.
-MAX_TTS_CHARS = _env_int("ATLAS_MAX_TTS_CHARS", 60_000, minimum=1_000)
+MAX_TTS_CHARS = _env_int("ATLAS_MAX_TTS_CHARS", 150_000, minimum=1_000)
 MAX_DOCUMENT_UPLOAD_BYTES = _env_int("ATLAS_MAX_DOCUMENT_MB", 50) * 1024 * 1024
 MAX_AUDIO_UPLOAD_BYTES = _env_int("ATLAS_MAX_AUDIO_MB", 200) * 1024 * 1024
 MAX_DOCUMENT_TEXT_CHARS = _env_int("ATLAS_MAX_DOCUMENT_TEXT_CHARS", 240_000, minimum=5_000)
 MAX_TRANSLATION_TEXT_CHARS = _env_int("ATLAS_MAX_TRANSLATION_CHARS", 60_000, minimum=5_000)
-MAX_ACTIVE_JOBS = _env_int("ATLAS_MAX_ACTIVE_JOBS", 3, minimum=1)
+MAX_ACTIVE_JOBS = _env_int("ATLAS_MAX_ACTIVE_JOBS", 6, minimum=1)
 JOB_HISTORY_LIMIT = _env_int("ATLAS_JOB_HISTORY_LIMIT", 30, minimum=5)
 SESSION_TTL_SECONDS = _env_int("ATLAS_SESSION_DAYS", 30, minimum=1) * 24 * 60 * 60
 AUDIO_SUPPORTED = {
@@ -322,8 +322,45 @@ def _trim_jobs() -> None:
         _persist_jobs()
 
 
-def _enqueue_job(kind: str, title: str, payload: dict[str, Any], total: int = 0) -> Job:
-    if _active_job_count() >= MAX_ACTIVE_JOBS:
+def _split_text_for_jobs(text: str, max_chars: int) -> list[str]:
+    """Divide texto en chunks <= max_chars respetando párrafos y oraciones."""
+    if len(text) <= max_chars:
+        return [text]
+    paragraphs = [p.strip() for p in re.split(r"\n\n+", text) if p.strip()]
+    chunks: list[str] = []
+    buf: list[str] = []
+    buf_len = 0
+    for para in paragraphs:
+        if len(para) > max_chars:
+            if buf:
+                chunks.append("\n\n".join(buf))
+                buf, buf_len = [], 0
+            sentences = re.split(r"(?<=[.!?])\s+", para)
+            sbuf: list[str] = []
+            sbuf_len = 0
+            for s in sentences:
+                if sbuf_len + len(s) + 1 > max_chars and sbuf:
+                    chunks.append(" ".join(sbuf))
+                    sbuf, sbuf_len = [s], len(s)
+                else:
+                    sbuf.append(s)
+                    sbuf_len += len(s) + 1
+            if sbuf:
+                chunks.append(" ".join(sbuf))
+            continue
+        if buf_len + len(para) + 2 > max_chars and buf:
+            chunks.append("\n\n".join(buf))
+            buf, buf_len = [para], len(para)
+        else:
+            buf.append(para)
+            buf_len += len(para) + 2
+    if buf:
+        chunks.append("\n\n".join(buf))
+    return [c for c in chunks if c.strip()]
+
+
+def _enqueue_job(kind: str, title: str, payload: dict[str, Any], total: int = 0, _skip_limit_check: bool = False) -> Job:
+    if not _skip_limit_check and _active_job_count() >= MAX_ACTIVE_JOBS:
         raise HTTPException(
             status_code=429,
             detail=f"Ya hay {MAX_ACTIVE_JOBS} trabajos activos. Espera o cancela uno.",
@@ -483,6 +520,7 @@ async def index(request: Request):
             "voices": tts.AVAILABLE_VOICES,
             "default_voice": tts.DEFAULT_VOICE,
             "max_tts_chars": MAX_TTS_CHARS,
+            "max_document_text_chars": MAX_DOCUMENT_TEXT_CHARS,
             "max_document_mb": MAX_DOCUMENT_UPLOAD_BYTES // 1024 // 1024,
             "max_audio_mb": MAX_AUDIO_UPLOAD_BYTES // 1024 // 1024,
             "max_translation_chars": MAX_TRANSLATION_TEXT_CHARS,
@@ -501,6 +539,7 @@ async def health():
 async def limits():
     return {
         "max_tts_chars": MAX_TTS_CHARS,
+        "max_document_text_chars": MAX_DOCUMENT_TEXT_CHARS,
         "max_document_mb": MAX_DOCUMENT_UPLOAD_BYTES // 1024 // 1024,
         "max_audio_mb": MAX_AUDIO_UPLOAD_BYTES // 1024 // 1024,
         "max_translation_chars": MAX_TRANSLATION_TEXT_CHARS,
@@ -520,11 +559,14 @@ async def get_voices():
 async def tts_estimate(payload: dict):
     text = (payload or {}).get("text", "")
     if not text.strip():
-        return {"fragments": 0, "chars": 0, "max_chars": MAX_TTS_CHARS}
+        return {"fragments": 0, "chars": 0, "max_chars": MAX_TTS_CHARS, "split_parts": 0}
+    chunks = _split_text_for_jobs(text, MAX_TTS_CHARS)
+    total_fragments = sum(tts.engine.count_fragments(c) for c in chunks)
     return {
-        "fragments": tts.engine.count_fragments(text),
+        "fragments": total_fragments,
         "chars": len(text),
         "max_chars": MAX_TTS_CHARS,
+        "split_parts": len(chunks),
     }
 
 
@@ -532,25 +574,37 @@ async def tts_estimate(payload: dict):
 async def create_tts_job(payload: dict):
     text = (payload or {}).get("text", "").strip()
     voice = (payload or {}).get("voice", tts.DEFAULT_VOICE)
-    title = ((payload or {}).get("title") or _title_from_text(text)).strip()
+    title = ((payload or {}).get("title") or _title_from_text(text)).strip()[:90] or "Lectura generada"
     if not text:
         raise HTTPException(status_code=400, detail="Texto vacío.")
-    if len(text) > MAX_TTS_CHARS:
+    if len(text) > MAX_DOCUMENT_TEXT_CHARS:
         raise HTTPException(
             status_code=413,
-            detail=(
-                f"Texto demasiado largo ({len(text)} caracteres). "
-                f"Máximo seguro por trabajo: {MAX_TTS_CHARS}."
-            ),
+            detail=f"Texto demasiado largo ({len(text):,} chars). Máximo para libros: {MAX_DOCUMENT_TEXT_CHARS:,}.",
         )
-    fragments = tts.engine.count_fragments(text)
-    job = _enqueue_job(
-        "tts",
-        title=title[:90] or "Lectura generada",
-        payload={"text": text, "voice": voice, "speed": 1.0},
-        total=fragments,
+    chunks = _split_text_for_jobs(text, MAX_TTS_CHARS)
+    total_parts = len(chunks)
+    free_slots = MAX_ACTIVE_JOBS - _active_job_count()
+    if total_parts > free_slots:
+        raise HTTPException(
+            status_code=429,
+            detail=f"El libro requiere {total_parts} partes pero solo hay {free_slots} ranuras libres.",
+        )
+    jobs = []
+    for i, chunk in enumerate(chunks, start=1):
+        part_title = f"{title} — parte {i}/{total_parts}" if total_parts > 1 else title
+        job = _enqueue_job(
+            "tts",
+            title=part_title,
+            payload={"text": chunk, "voice": voice, "speed": 1.0},
+            total=tts.engine.count_fragments(chunk),
+            _skip_limit_check=True,
+        )
+        jobs.append(job)
+    return JSONResponse(
+        {"jobs": [_public_job(j) for j in jobs], "split_count": total_parts},
+        status_code=202,
     )
-    return JSONResponse(_public_job(job), status_code=202)
 
 
 @app.post("/api/tts")
