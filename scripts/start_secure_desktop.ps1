@@ -66,7 +66,7 @@ $env:ATLAS_TRANSLATION_MODEL         = $TranslationModel
 $env:ATLAS_TRANSLATION_UNLOAD        = "1"
 $env:ATLAS_TRANSLATION_KEEP_ALIVE    = "2m"
 
-# Descarga Kokoro y Whisper de VRAM tras cada trabajo.
+# Descarga XTTSv2 y Whisper de VRAM tras cada trabajo.
 # La GPU queda libre entre sesiones; la primera peticion recarga (~10-30 s).
 $env:ATLAS_UNLOAD_MODELS = "1"
 

@@ -1,13 +1,12 @@
 """
-textprep.py — Normalización y troceado de texto para Kokoro (español).
+textprep.py — Normalización y troceado de texto para TTS (español).
 
-Resuelve las limitaciones conocidas de Kokoro:
-  - No pronuncia números  -> los convierte a palabras (num2words, es).
-  - Límite de ~510 tokens  -> trocea por oraciones/párrafos sin pasarse.
-  - Siglas/abreviaturas     -> expansión de un diccionario básico (ampliable).
+  - Convierte números a palabras (num2words, es).
+  - Trocea por oraciones/párrafos respetando el límite de tokens del motor TTS.
+  - Expande abreviaturas frecuentes (ampliable).
 
-El troceado es la pieza clave para libros largos: produce fragmentos que Kokoro
-sintetiza de forma estable, y que luego se concatenan en el audio final.
+El troceado produce fragmentos que XTTSv2 sintetiza de forma estable,
+los cuales se concatenan en el audio final.
 """
 
 from __future__ import annotations
@@ -19,7 +18,7 @@ try:
 except ImportError:  # permitir importar el módulo aunque falte la dependencia
     num2words = None
 
-# Límite conservador de caracteres por fragmento. Kokoro corta ~510 tokens;
+# Límite conservador de caracteres por fragmento. XTTSv2 soporta ~400 tokens GPT;
 # en español ~1 token ≈ 0.6 chars de media, así que ~380-420 chars es seguro.
 MAX_CHARS = 380
 
@@ -69,7 +68,7 @@ def _number_to_words(match: re.Match) -> str:
 
 
 def normalize(text: str) -> str:
-    """Limpia y normaliza el texto para que Kokoro lo pronuncie bien en español."""
+    """Limpia y normaliza el texto para que XTTSv2 lo pronuncie bien en español."""
     text = text.replace("\r\n", "\n").replace("\r", "\n")
     text = _expand_abbreviations(text)
     text = _NUMBER.sub(_number_to_words, text)
@@ -113,7 +112,7 @@ def _split_long_sentence(sentence: str, max_chars: int) -> list[str]:
 def chunk(text: str, max_chars: int = MAX_CHARS) -> list[str]:
     """
     Divide el texto normalizado en fragmentos <= max_chars, respetando oraciones.
-    Devuelve la lista de fragmentos lista para enviar a Kokoro uno por uno.
+    Devuelve la lista de fragmentos lista para enviar a XTTSv2 uno por uno.
     """
     chunks: list[str] = []
     for paragraph in text.split("\n\n"):

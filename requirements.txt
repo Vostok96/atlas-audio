@@ -8,9 +8,8 @@ python-multipart==0.0.20
 jinja2==3.1.5
 
 # --- TTS ---
-kokoro>=0.9.4
+TTS>=0.22.0
 soundfile==0.13.1
-# espeak-ng se instala a nivel de sistema (ver README)
 
 # --- STT ---
 faster-whisper==1.1.1

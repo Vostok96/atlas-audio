@@ -1,7 +1,7 @@
 """
 translate.py - Traduccion asistida por Ollama para Atlas Audio.
 
-La traduccion se hace fuera del proceso de Kokoro/faster-whisper: este modulo
+La traduccion se hace fuera del proceso de XTTSv2/faster-whisper: este modulo
 solo llama al servidor local de Ollama por HTTP. Por defecto usa qwen3:14b,
 que es el modelo del Atlas de tesis en la desktop.
 """

@@ -59,7 +59,7 @@ def main() -> int:
 
     free, total = torch.cuda.mem_get_info()
     print(f"VRAM libre/total: {free/1e9:.1f} GB / {total/1e9:.1f} GB")
-    print("\n[OK] Todo correcto. Tu GPU está lista para Kokoro y faster-whisper.")
+    print("\n[OK] Todo correcto. Tu GPU está lista para XTTSv2 y faster-whisper.")
     return 0
 
 
