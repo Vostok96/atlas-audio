@@ -1,3 +1,6 @@
+# El password llega como string porque se asigna a una variable de entorno de texto plano.
+# SecureString no añadiría protección real aquí.
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingPlainTextForPassword', 'Password')]
 param(
     [string]$Username = "denis",
     [string]$Password,
@@ -60,6 +63,10 @@ $env:ATLAS_OLLAMA_BASE_URL = "http://127.0.0.1:11434"
 $env:ATLAS_TRANSLATION_MODEL = $TranslationModel
 $env:ATLAS_TRANSLATION_UNLOAD = "1"
 $env:ATLAS_TRANSLATION_KEEP_ALIVE = "2m"
+
+# Descarga Kokoro y Whisper de VRAM tras cada trabajo.
+# La GPU queda libre entre sesiones; la primera petición recarga (~10-30 s).
+$env:ATLAS_UNLOAD_MODELS = "1"
 
 Write-Host "[Atlas Audio] Actualizando pip..."
 & $python -m pip install --upgrade pip

@@ -139,6 +139,19 @@ class TTSEngine:
         meta["bytes"] = output_path.stat().st_size
         return meta
 
+    def unload(self) -> None:
+        """Descarga Kokoro de VRAM. Se recarga automáticamente en la siguiente síntesis."""
+        if self._pipeline is None:
+            return
+        del self._pipeline
+        self._pipeline = None
+        try:
+            import torch
+            torch.cuda.empty_cache()
+        except Exception:  # noqa: BLE001
+            pass
+        logger.info("Kokoro descargado de VRAM.")
+
     def count_fragments(self, text: str) -> int:
         """Cuántos fragmentos generará un texto (para estimaciones en la UI)."""
         return len(prepare(text))

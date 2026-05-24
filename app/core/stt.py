@@ -50,6 +50,19 @@ class STTEngine:
             )
         logger.info("faster-whisper cargado.")
 
+    def unload(self) -> None:
+        """Descarga faster-whisper de VRAM. Se recarga automáticamente en la siguiente transcripción."""
+        if self._model is None:
+            return
+        del self._model
+        self._model = None
+        try:
+            import torch
+            torch.cuda.empty_cache()
+        except Exception:  # noqa: BLE001
+            pass
+        logger.info("faster-whisper descargado de VRAM.")
+
     def transcribe(
         self,
         audio_path: str,

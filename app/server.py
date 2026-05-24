@@ -98,6 +98,11 @@ AUDIO_SUPPORTED = {
 # Mantener en 1 salvo que se quiera experimentar explícitamente.
 GPU_CONCURRENCY = 1
 
+# Descarga los modelos de VRAM tras cada trabajo.
+# Recomendado para uso personal no continuo: la GPU queda libre entre sesiones.
+# La primera petición de cada sesión tardará ~10-30 s extra en recargar el modelo.
+UNLOAD_MODELS_AFTER_JOB = _env_bool("ATLAS_UNLOAD_MODELS", True)
+
 AUTH_USERNAME = os.getenv("ATLAS_AUDIO_USERNAME", "denis")
 AUTH_PASSWORD = os.getenv("ATLAS_AUDIO_PASSWORD", "")
 SESSION_COOKIE = "atlas_audio_session"
@@ -878,6 +883,9 @@ async def _run_tts_job(job: Job) -> None:
     if job.cancel_requested:
         raise tts.SynthesisCancelled()
 
+    if UNLOAD_MODELS_AFTER_JOB:
+        tts.engine.unload()
+
     filename = f"{_slug(job.title) or 'atlas-audio'}-{job.id}.mp3"
     job.status = "done"
     job.progress = 1.0
@@ -920,6 +928,9 @@ async def _run_stt_job(job: Job) -> None:
         job.status = "cancelled"
         _touch(job, "Cancelado.")
         return
+
+    if UNLOAD_MODELS_AFTER_JOB:
+        stt.engine.unload()
 
     job.status = "done"
     job.progress = 1.0
@@ -978,6 +989,10 @@ async def _run_translate_audio_job(job: Job) -> None:
             f"Limite seguro para traducir y narrar: {MAX_TRANSLATION_TEXT_CHARS}."
         )
 
+    # Descarga Whisper antes de que Qwen cargue — reduce pico de VRAM de ~13 GB a ~9 GB.
+    if UNLOAD_MODELS_AFTER_JOB:
+        stt.engine.unload()
+
     _touch(job, "Traduciendo a espanol con Ollama...")
     translated_text = await asyncio.to_thread(
         translate.translate_to_spanish,
@@ -1006,6 +1021,9 @@ async def _run_translate_audio_job(job: Job) -> None:
     )
     if cancelled():
         raise tts.SynthesisCancelled()
+
+    if UNLOAD_MODELS_AFTER_JOB:
+        tts.engine.unload()
 
     filename = f"{_slug(job.title) or 'audio-traducido'}-es-{job.id}.mp3"
     job.status = "done"
