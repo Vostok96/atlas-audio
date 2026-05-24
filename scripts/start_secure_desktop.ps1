@@ -78,6 +78,12 @@ Write-Host "[Atlas Audio] Instalando PyTorch CUDA 12.8 para RTX 50xx..."
 & $python -m pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128 --quiet
 if ($LASTEXITCODE -ne 0) { throw "Fallo la instalacion de PyTorch cu128." }
 
+# TTS 0.22.0 declara Requires-Python <3.12 pero funciona en 3.12 sin problemas.
+# --ignore-requires-python omite esa restriccion conservadora del paquete.
+Write-Host "[Atlas Audio] Instalando Coqui TTS (ignora restriccion Python <3.12)..."
+& $python -m pip install "TTS==0.22.0" --ignore-requires-python --quiet
+if ($LASTEXITCODE -ne 0) { throw "Fallo la instalacion de Coqui TTS." }
+
 Write-Host "[Atlas Audio] Instalando dependencias..."
 & $python -m pip install -r requirements.txt --quiet
 if ($LASTEXITCODE -ne 0) { throw "Fallo la instalacion de requirements.txt." }

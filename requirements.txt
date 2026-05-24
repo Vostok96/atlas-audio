@@ -8,7 +8,8 @@ python-multipart==0.0.20
 jinja2==3.1.5
 
 # --- TTS ---
-TTS>=0.22.0
+# Coqui TTS se instala aparte con --ignore-requires-python (ver start_secure_desktop.ps1)
+# porque el paquete declara <3.12 aunque funciona correctamente en 3.12.
 soundfile==0.13.1
 
 # --- STT ---
