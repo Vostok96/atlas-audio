@@ -24,26 +24,26 @@ if (-not $SkipUpdate) {
     }
 }
 
-$py312 = Get-Command py -ErrorAction SilentlyContinue
-if (-not $py312) {
-    throw "No encuentro el launcher 'py'. Instala Python 3.12 con: winget install Python.Python.3.12"
+$pyLauncher = Get-Command py -ErrorAction SilentlyContinue
+if (-not $pyLauncher) {
+    throw "No encuentro el launcher 'py'. Instala Python 3.11 con: winget install Python.Python.3.11"
 }
 
-$versionCheck = & py -3.12 -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')" 2>$null
-if ($LASTEXITCODE -ne 0 -or $versionCheck.Trim() -ne "3.12") {
-    throw "Python 3.12 no esta instalado. Instalalo con: winget install Python.Python.3.12"
+$versionCheck = & py -3.11 -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')" 2>$null
+if ($LASTEXITCODE -ne 0 -or $versionCheck.Trim() -ne "3.11") {
+    throw "Python 3.11 no esta instalado. Instalalo con: winget install Python.Python.3.11"
 }
 
 if (Test-Path ".\.venv\Scripts\python.exe") {
     $venvVersion = & ".\.venv\Scripts\python.exe" -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')" 2>$null
-    if ($venvVersion.Trim() -ne "3.12") {
-        Write-Host "[Atlas Audio] Rehaciendo .venv porque no usa Python 3.12..."
+    if ($venvVersion.Trim() -ne "3.11") {
+        Write-Host "[Atlas Audio] Rehaciendo .venv porque no usa Python 3.11 (requerido por Coqui TTS)..."
         Remove-Item ".\.venv" -Recurse -Force
     }
 }
 
 if (-not (Test-Path ".\.venv\Scripts\python.exe")) {
-    py -3.12 -m venv .venv
+    py -3.11 -m venv .venv
 }
 
 $python = ".\.venv\Scripts\python.exe"
@@ -78,10 +78,8 @@ Write-Host "[Atlas Audio] Instalando PyTorch CUDA 12.8 para RTX 50xx..."
 & $python -m pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128 --quiet
 if ($LASTEXITCODE -ne 0) { throw "Fallo la instalacion de PyTorch cu128." }
 
-# TTS 0.22.0 declara Requires-Python <3.12 pero funciona en 3.12 sin problemas.
-# --ignore-requires-python omite esa restriccion conservadora del paquete.
-Write-Host "[Atlas Audio] Instalando Coqui TTS (ignora restriccion Python <3.12)..."
-& $python -m pip install "TTS==0.22.0" --ignore-requires-python --quiet
+Write-Host "[Atlas Audio] Instalando Coqui TTS..."
+& $python -m pip install "TTS==0.22.0" --quiet
 if ($LASTEXITCODE -ne 0) { throw "Fallo la instalacion de Coqui TTS." }
 
 Write-Host "[Atlas Audio] Instalando dependencias..."
