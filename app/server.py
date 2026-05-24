@@ -450,8 +450,8 @@ async def login_submit(request: Request):
             request,
             "Define ATLAS_AUDIO_PASSWORD en la desktop antes de exponer el servicio.",
         )
-    valid_user = hmac.compare_digest(username.strip(), AUTH_USERNAME)
-    valid_password = hmac.compare_digest(password, AUTH_PASSWORD)
+    valid_user = hmac.compare_digest(username.strip().encode("utf-8"), AUTH_USERNAME.encode("utf-8"))
+    valid_password = hmac.compare_digest(password.encode("utf-8"), AUTH_PASSWORD.encode("utf-8"))
     if not (valid_user and valid_password):
         return _render_login(request, "Usuario o contraseña incorrectos.")
 
